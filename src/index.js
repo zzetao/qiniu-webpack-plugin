@@ -2,11 +2,13 @@ const url = require('url');
 const request = require('request-promise');
 const _ = require('lodash');
 const path = require('path');
+const revalidator = require('revalidator');
 
 const Qiniu = require('./qiniu');
 const { combineFiles } = require('./utils');
 
 const LOG_FILENAME = '__qiniu__webpack__plugin__files.json';
+const CONFIG_FILENAME = '.qiniu_webpack';
 
 /**
  * options: {
@@ -19,20 +21,24 @@ const LOG_FILENAME = '__qiniu__webpack__plugin__files.json';
  * }
  */
 class QiniuPlugin {
-  constructor(options) {
+  constructor(options = { }) {    
     const defaultOptions = {
-      
+      uploadPath: 'webpack_assets' // default uploadPath
     }
-    this.options = Object.assign(defaultOptions, options);
+    const fileOptions = this.getFileConfig();
+    this.options = Object.assign(defaultOptions, options, fileOptions);
+
+    this.validateOptions(this.options);
+
     let { uploadPath } = this.options;
 
-    if (uploadPath && uploadPath[0] === '/') {
+    if (uploadPath[0] === '/') {
       this.options.uploadPath = uploadPath.slice(1, uploadPath.length);
     }
-    
+
     const { accessKey, secretKey, bucket, bucketDomain } = this.options;
-    
-    this.publicPath = url.resolve(bucketDomain, uploadPath);
+
+    this.publicPath = url.resolve(bucketDomain, uploadPath);  // domain + uploadPath
 
     this.qiniu = new Qiniu({
       accessKey,
@@ -42,8 +48,53 @@ class QiniuPlugin {
     })
   }
 
+  validateOptions(options) {
+    let validate = revalidator.validate(options, {
+      properties: {
+        accessKey: {
+          type: 'string',
+          required: true
+        },
+        secretKey: {
+          type: 'string',
+          required: true
+        },
+        bucket: {
+          type: 'string',
+          required: true,
+          minLength: 4,
+          maxLength: 63
+        },
+        bucketDomain: {
+          type: 'string',
+          required: true,
+          format: 'url'
+        },
+        uploadPath: {
+          type: 'string'
+        },
+        ignoreFiles: {
+          type: 'array'
+        }
+      }
+    });
+
+    if (!validate.valid) {
+      const { errors } = validate; 
+      console.log('[QiniuWebpackPlugin] options validate fail');
+      for(let i = 0, len = errors.length; i < len; i++) {
+        const error = errors[i];
+        console.log(error.property, error.message);
+      }
+      process.exit();
+    }
+  }
+
   apply (compiler) {
+    return;
     compiler.plugin('before-run', (compiler, callback) => {
+      // TODO: 检查 output.filename 是否有 hash 输出
+
       compiler.options.output.publicPath = this.publicPath;
       callback();
     })
@@ -92,6 +143,14 @@ class QiniuPlugin {
 
       callback();
     });
+  }
+  
+  getFileConfig() {
+    try {
+      return require(path.resolve(CONFIG_FILENAME));
+    } catch(e) {
+      return null;
+    }
   }
   
   /**
