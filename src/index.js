@@ -3,6 +3,7 @@ const request = require('request-promise');
 const _ = require('lodash');
 const path = require('path');
 const revalidator = require('revalidator');
+const mm = require('micromatch');
 
 const Qiniu = require('./qiniu');
 const { combineFiles } = require('./utils');
@@ -16,7 +17,7 @@ const CONFIG_FILENAME = '.qiniu_webpack';
  *    secretKey: '', @required
  *    bucket: '', @required
  *    bucketDomain: '', @required
- *    ignoreFiles: [],
+ *    matchFiles: [],
  *    uploadPath: '',
  * }
  */
@@ -25,7 +26,7 @@ class QiniuPlugin {
     const defaultOptions = {
       uploadPath: 'webpack_assets' // default uploadPath
     }
-    const fileOptions = this.getFileConfig();
+    const fileOptions = this.getFileOptions();
     this.options = Object.assign(defaultOptions, options, fileOptions);
 
     this.validateOptions(this.options);
@@ -73,7 +74,7 @@ class QiniuPlugin {
         uploadPath: {
           type: 'string'
         },
-        ignoreFiles: {
+        matchFiles: {
           type: 'array'
         }
       }
@@ -107,15 +108,13 @@ class QiniuPlugin {
        * 将每个文件生成一遍 md5，存起来，下次上传时，再校验一遍？？
        */
       // 处理文件过滤
-      const releaseFiles = fileNames;
+      const releaseFiles = this.matchFiles(fileNames);
 
       // 获取文件日志
       const {
         prev: prevFiles = [],
         current: currentFiles = []
       } = await this.getLogFile();
-
-      console.log(`currentFiles: ${currentFiles}, prevFiles: ${prevFiles}`);
 
       // 合并去重，提取最终要上传和删除的文件
       const { uploadFiles, deleteFiles } = combineFiles(prevFiles, currentFiles, releaseFiles);
@@ -145,7 +144,13 @@ class QiniuPlugin {
     });
   }
   
-  getFileConfig() {
+  matchFiles(fileNames) {
+    const { matchFiles } = this.options;
+
+    return mm(fileNames, matchFiles, { matchBase: true });
+  }
+  
+  getFileOptions() {
     try {
       return require(path.resolve(CONFIG_FILENAME));
     } catch(e) {
