@@ -4,6 +4,7 @@ const _ = require('lodash');
 const path = require('path');
 const revalidator = require('revalidator');
 const mm = require('micromatch');
+const mapLimit = require('map-limit');
 
 const Qiniu = require('./qiniu');
 const { combineFiles } = require('./utils');
@@ -19,12 +20,14 @@ const CONFIG_FILENAME = '.qiniu_webpack';
  *    bucketDomain: '', @required
  *    matchFiles: [],
  *    uploadPath: '',
+ *    batch: 10
  * }
  */
 class QiniuPlugin {
   constructor(options = { }) {    
     const defaultOptions = {
-      uploadPath: 'webpack_assets' // default uploadPath
+      uploadPath: 'webpack_assets', // default uploadPath
+      batch: 10
     }
     const fileOptions = this.getFileOptions();
     this.options = Object.assign(defaultOptions, options, fileOptions);
@@ -92,7 +95,7 @@ class QiniuPlugin {
   }
 
   apply (compiler) {
-    return;
+    
     compiler.plugin('before-run', (compiler, callback) => {
       // TODO: 检查 output.filename 是否有 hash 输出
 
@@ -118,22 +121,29 @@ class QiniuPlugin {
 
       // 合并去重，提取最终要上传和删除的文件
       const { uploadFiles, deleteFiles } = combineFiles(prevFiles, currentFiles, releaseFiles);
-      try {
-        // 上传
-        for(let i = 0, len = uploadFiles.length; i < len; i ++) {
-          const filename = uploadFiles[i];
-          const file = compilation.assets[filename];
 
-          const key = path.join(this.options.uploadPath, filename);  //  -> uploadPath/filename
-          const localPath = file.existsAt;
-          console.log(`[upload]: key: ${key}`);
+      const uploadFileTasks = uploadFiles.map((filename, index) => {
+        const file = compilation.assets[filename];
 
-          let res = await this.qiniu.putFile(key, localPath);
+        return this.putFile(filename, file.existsAt);
+      });
+      
+      mapLimit(uploadFileTasks, this.options.batch,
+        (item, next) => {
+          (async () => {
+            try {
+              const res = await item();
+              next(null, res);
+            } catch(err) {
+              next(err);
+            }
+          })();
+        },
+        (err, results) => {
+
         }
-      } catch(e) {
-        console.log('[upload] error: ',e );
-      }
-
+      );
+      
       // 当有文件要上传才去删除之前版本的文件，且写入日志
       if (uploadFiles.length > 0) {
         await this.deleteOldFiles(deleteFiles);
@@ -142,6 +152,13 @@ class QiniuPlugin {
 
       callback();
     });
+  }
+
+  putFile(filename, filepath) {
+    return async () => {
+      const key = path.join(this.options.uploadPath, filename);
+      return await this.qiniu.putFile(key, filepath);        
+    }
   }
   
   matchFiles(fileNames) {
