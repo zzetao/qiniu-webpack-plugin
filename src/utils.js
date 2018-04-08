@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const mapLimit = require('map-limit');
 
 module.exports = {
   /**
@@ -30,5 +31,22 @@ module.exports = {
       uploadFiles,
       deleteFiles
     };
+  },
+  
+  mapLimit(list, limit, iterator) {
+    return new Promise((resolve, reject) => {
+      mapLimit(
+        list,
+        limit,
+        iterator,
+        (err, results) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(results);
+          }
+        }
+      )
+    })
   }
 }

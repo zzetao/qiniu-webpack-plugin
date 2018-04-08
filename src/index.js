@@ -4,23 +4,23 @@ const _ = require('lodash');
 const path = require('path');
 const revalidator = require('revalidator');
 const mm = require('micromatch');
-const mapLimit = require('map-limit');
+
 
 const Qiniu = require('./qiniu');
-const { combineFiles } = require('./utils');
+const { combineFiles, mapLimit } = require('./utils');
 
 const LOG_FILENAME = '__qiniu__webpack__plugin__files.json';
 const CONFIG_FILENAME = '.qiniu_webpack';
 
 /**
  * options: {
- *    accessKey: '', @required
- *    secretKey: '', @required
- *    bucket: '', @required
- *    bucketDomain: '', @required
+ *    accessKey: string, @required
+ *    secretKey: string, @required
+ *    bucket: string, @required
+ *    bucketDomain: string, @required
  *    matchFiles: [],
- *    uploadPath: '',
- *    batch: 10
+ *    uploadPath: string,
+ *    batch: number
  * }
  */
 class QiniuPlugin {
@@ -28,7 +28,7 @@ class QiniuPlugin {
     const defaultOptions = {
       uploadPath: 'webpack_assets', // default uploadPath
       batch: 10
-    }
+    };
     const fileOptions = this.getFileOptions();
     this.options = Object.assign(defaultOptions, options, fileOptions);
 
@@ -41,9 +41,7 @@ class QiniuPlugin {
     }
 
     const { accessKey, secretKey, bucket, bucketDomain } = this.options;
-
     this.publicPath = url.resolve(bucketDomain, uploadPath);  // domain + uploadPath
-
     this.qiniu = new Qiniu({
       accessKey,
       secretKey,
@@ -105,7 +103,6 @@ class QiniuPlugin {
 
     compiler.plugin('after-emit', async (compilation, callback) => {
       const fileNames = Object.keys(compilation.assets);
-
       /**
        * 对于一些文件名没带 hash 的，怎么处理？？
        * 将每个文件生成一遍 md5，存起来，下次上传时，再校验一遍？？
@@ -128,7 +125,7 @@ class QiniuPlugin {
         return this.putFile(filename, file.existsAt);
       });
       
-      mapLimit(uploadFileTasks, this.options.batch,
+      await mapLimit(uploadFileTasks, this.options.batch,
         (item, next) => {
           (async () => {
             try {
@@ -138,12 +135,9 @@ class QiniuPlugin {
               next(err);
             }
           })();
-        },
-        (err, results) => {
-
         }
       );
-      
+
       // 当有文件要上传才去删除之前版本的文件，且写入日志
       if (uploadFiles.length > 0) {
         await this.deleteOldFiles(deleteFiles);
@@ -163,6 +157,8 @@ class QiniuPlugin {
   
   matchFiles(fileNames) {
     const { matchFiles } = this.options;
+
+    matchFiles.push('*');
 
     return mm(fileNames, matchFiles, { matchBase: true });
   }
