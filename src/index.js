@@ -4,13 +4,16 @@ const _ = require('lodash');
 const path = require('path');
 const revalidator = require('revalidator');
 const mm = require('micromatch');
-
+const ora = require('ora');
+const chalk = require('chalk');
 
 const Qiniu = require('./qiniu');
 const { combineFiles, mapLimit } = require('./utils');
+const Reporter = require('./reporter');
 
 const LOG_FILENAME = '__qiniu__webpack__plugin__files.json';
 const CONFIG_FILENAME = '.qiniu_webpack';
+const PLUGIN_NAME = 'QiniuWebpackPlugin';
 
 /**
  * options: {
@@ -93,16 +96,18 @@ class QiniuPlugin {
   }
 
   apply (compiler) {
-    
-    compiler.plugin('before-run', (compiler, callback) => {
+    const beforeRunCallback = (compiler, callback) => {
       // TODO: 检查 output.filename 是否有 hash 输出
-
       compiler.options.output.publicPath = this.publicPath;
       callback();
-    })
-
-    compiler.plugin('after-emit', async (compilation, callback) => {
+    }
+    
+    const afterEmitCallback = async (compilation, callback) => {
       const fileNames = Object.keys(compilation.assets);
+      console.log('\n');
+      console.log(chalk.bold.green('==== Qiniu Webpack Plugin ==== \n'));
+      const reporter = new Reporter('\n');
+
       /**
        * 对于一些文件名没带 hash 的，怎么处理？？
        * 将每个文件生成一遍 md5，存起来，下次上传时，再校验一遍？？
@@ -110,26 +115,38 @@ class QiniuPlugin {
       // 处理文件过滤
       const releaseFiles = this.matchFiles(fileNames);
 
+      reporter.text = '📦   正在获取历史数据';
+      
       // 获取文件日志
       const {
+        uploadTime,
         prev: prevFiles = [],
         current: currentFiles = []
       } = await this.getLogFile();
-
+      reporter.log = '📦   获取历史数据';
+      
       // 合并去重，提取最终要上传和删除的文件
       const { uploadFiles, deleteFiles } = combineFiles(prevFiles, currentFiles, releaseFiles);
-
+      
+      reporter.log = `🍔   将上传 ${uploadFiles.length} 个文件`;
+      
       const uploadFileTasks = uploadFiles.map((filename, index) => {
         const file = compilation.assets[filename];
 
-        return this.putFile(filename, file.existsAt);
+        return async () => {
+          const key = path.join(this.options.uploadPath, filename);
+
+          reporter.text = `🚀  正在上传第${index}个文件: ${key}`;
+          
+          return await this.qiniu.putFile(key, file.existsAt);
+        }
       });
       
       await mapLimit(uploadFileTasks, this.options.batch,
-        (item, next) => {
+        (task, next) => {
           (async () => {
             try {
-              const res = await item();
+              const res = await task();
               next(null, res);
             } catch(err) {
               next(err);
@@ -138,27 +155,43 @@ class QiniuPlugin {
         }
       );
 
+      reporter.log = '❤️   上传完毕';
+
       // 当有文件要上传才去删除之前版本的文件，且写入日志
       if (uploadFiles.length > 0) {
-        await this.deleteOldFiles(deleteFiles);
+
+        if (deleteFiles.length > 0) {
+          reporter.log = `👋🏼   将删除 ${deleteFiles.length} 个文件`;
+          reporter.text = `🤓   正在批量删除...`;
+          await this.deleteOldFiles(deleteFiles);
+          reporter.log = `💙   删除完毕`;  
+        }
+
+        reporter.text = `📝   正在写入日志...`;
         await this.writeLogFile(currentFiles, releaseFiles);
+        reporter.log = `📝   日志记录完毕`
       }
 
+      reporter.succeed('🎉 \n');
+      console.log(chalk.bold.green('==== Qiniu Webpack Plugin ==== \n'));
+
       callback();
-    });
-  }
-
-  putFile(filename, filepath) {
-    return async () => {
-      const key = path.join(this.options.uploadPath, filename);
-      return await this.qiniu.putFile(key, filepath);        
     }
-  }
-  
-  matchFiles(fileNames) {
-    const { matchFiles } = this.options;
+    
+    if (compiler.hooks) {
+      compiler.hooks.beforeRun.tapAsync(PLUGIN_NAME, beforeRunCallback);
+      compiler.hooks.afterEmit.tapAsync(PLUGIN_NAME, afterEmitCallback);
+    } else {
+      compiler.plugin('before-run', beforeRunCallback);
+      compiler.plugin('after-emit', afterEmitCallback);
+    }
 
-    matchFiles.push('*');
+  }
+
+  matchFiles(fileNames) {
+    const { matchFiles = [] } = this.options;
+
+    matchFiles.unshift('*'); // all files
 
     return mm(fileNames, matchFiles, { matchBase: true });
   }
@@ -211,9 +244,9 @@ class QiniuPlugin {
       uri: logDownloadUrl + randomParams,
       json: true
     })
-    .catch(err => ({ prev: [], current: [] }))
+    .catch(err => ({ prev: [], current: [], uploadTime: '' }))
   }
-  
+
 }
 
 module.exports = QiniuPlugin;
