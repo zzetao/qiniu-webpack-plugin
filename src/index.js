@@ -73,24 +73,35 @@ class QiniuPlugin {
         bucketDomain: {
           type: 'string',
           required: true,
-          format: 'url'
+          message: 'is not a valid url',
+          conform (v) {
+            let urlReg = /[-a-zA-Z0-9@:%_\+.~#?&//=]{1,256}\.[a-z]{1,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+            if (urlReg.test(v)) {
+              return true;
+            }
+            return false;
+          }
         },
         uploadPath: {
           type: 'string'
         },
         matchFiles: {
           type: 'array'
+        },
+        batch: {
+          type: 'number'
         }
       }
     });
 
     if (!validate.valid) {
       const { errors } = validate; 
-      console.log('[QiniuWebpackPlugin] options validate fail');
+      console.log(chalk.bold.red('[QiniuWebpackPlugin] options validate failure:'));
       for(let i = 0, len = errors.length; i < len; i++) {
         const error = errors[i];
-        console.log(error.property, error.message);
+        console.log('\n    > ', error.property, error.message);
       }
+      console.log('\n');
       process.exit();
     }
   }
@@ -108,10 +119,6 @@ class QiniuPlugin {
       console.log(chalk.bold.green('==== Qiniu Webpack Plugin ==== \n'));
       const reporter = new Reporter('\n');
 
-      /**
-       * 对于一些文件名没带 hash 的，怎么处理？？
-       * 将每个文件生成一遍 md5，存起来，下次上传时，再校验一遍？？
-       */
       // 处理文件过滤
       const releaseFiles = this.matchFiles(fileNames);
 
@@ -136,7 +143,7 @@ class QiniuPlugin {
         return async () => {
           const key = path.join(this.options.uploadPath, filename);
 
-          reporter.text = `🚀  正在上传第${index}个文件: ${key}`;
+          reporter.text = `🚀  正在上传第 ${index} 个文件: ${key}`;
           
           return await this.qiniu.putFile(key, file.existsAt);
         }
@@ -210,7 +217,6 @@ class QiniuPlugin {
    */
   async deleteOldFiles(deleteFiles) {
     if (deleteFiles.length > 0) {
-      console.log('deleteFiles', deleteFiles);
       const keys = deleteFiles.map((filename, index) => path.join(this.options.uploadPath, filename));
       await this.qiniu.batchDelete(keys);
     }
