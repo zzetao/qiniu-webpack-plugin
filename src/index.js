@@ -143,7 +143,7 @@ class QiniuPlugin {
         return async () => {
           const key = path.join(this.options.uploadPath, filename);
 
-          reporter.text = `🚀  正在上传第 ${index} 个文件: ${key}`;
+          reporter.text = `🚀  正在上传第 ${index + 1} 个文件: ${key}`;
           
           return await this.qiniu.putFile(key, file.existsAt);
         }
@@ -246,6 +246,12 @@ class QiniuPlugin {
 
     let randomParams = '?r=' + +new Date();
     
+    // 域名没有通信协议
+    // TODO: 此处 处理不妥当，如果不支持 http 通信，还得再请求一遍 https
+    if (logDownloadUrl.indexOf('//') === 0) {
+      logDownloadUrl = 'http:' + logDownloadUrl;
+    }
+
     return request({
       uri: logDownloadUrl + randomParams,
       json: true
