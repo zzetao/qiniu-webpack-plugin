@@ -147,18 +147,23 @@ class QiniuPlugin {
         }
       });
       
-      await mapLimit(uploadFileTasks, this.options.batch,
-        (task, next) => {
-          (async () => {
-            try {
-              const res = await task();
-              next(null, res);
-            } catch(err) {
-              next(err);
-            }
-          })();
-        }
-      );
+      try {
+        await mapLimit(uploadFileTasks, this.options.batch,
+          (task, next) => {
+            (async () => {
+              try {
+                const res = await task();
+                next(null, res);
+              } catch(err) {
+                next(err);
+              }
+            })();
+          }
+        );
+      } catch(e) {
+        console.error(chalk.bold.red('\n\n上传失败:'));
+        callback(e);
+      }
 
       reporter.log = '❤️   上传完毕';
 
@@ -205,6 +210,9 @@ class QiniuPlugin {
     try {
       return require(path.resolve(CONFIG_FILENAME));
     } catch(e) {
+      if (e.code !== 'MODULE_NOT_FOUND') {
+        throw e;
+      }
       return null;
     }
   }
