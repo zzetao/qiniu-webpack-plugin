@@ -1,7 +1,7 @@
 {
-  "name": "qiniu-webpack-plugin",
+  "name": "better-qiniu-webpack-plugin",
   "version": "0.0.1",
-  "description": "",
+  "description": "Webpack 编译后的文件上传到 七牛云存储",
   "main": "src/index.js",
   "scripts": {
     "test": "ava"
@@ -11,8 +11,12 @@
     "url": "git+https://github.com/zzetao/qiniu-webpack-plugin.git"
   },
   "keywords": [
-    "webpack"
+    "webpack",
+    "qiniu"
   ],
+  "engines": {
+    "node": ">=7.6.0"
+  },
   "author": "zzetao",
   "license": "MIT",
   "bugs": {
@@ -21,7 +25,7 @@
   "homepage": "https://github.com/zzetao/qiniu-webpack-plugin#readme",
   "dependencies": {
     "chalk": "^2.3.2",
-    "lodash": "^4.17.5",
+    "lodash.difference": "^4.5.0",
     "map-limit": "^0.0.1",
     "micromatch": "^3.1.10",
     "ora": "^2.0.0",
@@ -32,5 +36,8 @@
   },
   "devDependencies": {
     "ava": "^0.25.0"
-  }
+  },
+  "files" : [
+    "src"
+  ]
 }

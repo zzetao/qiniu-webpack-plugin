@@ -1,10 +1,8 @@
 const url = require('url');
 const request = require('request-promise');
-const _ = require('lodash');
 const path = require('path');
 const revalidator = require('revalidator');
 const mm = require('micromatch');
-const ora = require('ora');
 const chalk = require('chalk');
 
 const Qiniu = require('./qiniu');

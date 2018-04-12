@@ -1,4 +1,4 @@
-const _ = require('lodash');
+const difference = require('lodash.difference');
 const mapLimit = require('map-limit');
 
 module.exports = {
@@ -21,10 +21,10 @@ module.exports = {
    * 
    */
   combineFiles(prevFiles, currentFiles, releaseFiles) {
-    let deleteFiles = _.difference(prevFiles, currentFiles);
-    let uploadFiles = _.difference(releaseFiles, currentFiles);
+    let deleteFiles = difference(prevFiles, currentFiles);
+    let uploadFiles = difference(releaseFiles, currentFiles);
     
-    deleteFiles = _.difference(deleteFiles, uploadFiles);
+    deleteFiles = difference(deleteFiles, uploadFiles);
     
     // 返回最终要上传的文件列表
     return {
