@@ -61,4 +61,14 @@ module.exports = {
 - `bucketDomain` 支持不携带通信协议: `//domain.bkt.clouddn.com`
 - `matchFiles` 匹配相关文件或文件夹，详细使用请看: [micromatch](https://github.com/micromatch/micromatch)
   - `!*.html` 不上传文件后缀为 `html` 的文件
-  - `!assets/**.map` 不上传 `src` 文件夹下文件后缀为 `map` 的文件
+  - `!assets/**.map` 不上传 `assets` 文件夹下文件后缀为 `map` 的文件
+
+
+
+***
+
+
+## License
+
+Copyright © 2018, [zzetao](https://github.com/zzetao).
+Released under the [MIT License](LICENSE).
