@@ -52,7 +52,7 @@ module.exports = {
 |:--:|:--:|:-----:|:-----:|:----------|
 |**[`accessKey`](#)**|`{String}`| | true |七牛 Access Key|
 |**[`secretKey`](#)**|`{String}`| | true |七牛 Secret Key|
-|**[`bucket`](#)**|`{String}`| | true |七牛 空间名|
+|**[`bucket`](#)**|`{String}`| | true |七牛 空间名|
 |**[`bucketDomain`](#)**|`{String}`| | true |七牛 空间域名|
 |**[`matchFiles`](#)**|`{Array[string]}`| ['*'] | false |匹配文件/文件夹，支持 include/exclude|
 |**[`uploadPath`](#)**|`{string}`| /webpack_assets | false |上传文件夹名|

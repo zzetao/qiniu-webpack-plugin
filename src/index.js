@@ -139,7 +139,7 @@ class QiniuPlugin {
         const file = compilation.assets[filename];
 
         return async () => {
-          const key = path.join(this.options.uploadPath, filename);
+          const key = path.posix.join(this.options.uploadPath, filename);
 
           reporter.text = `🚀  正在上传第 ${index + 1} 个文件: ${key}`;
           
@@ -223,7 +223,7 @@ class QiniuPlugin {
    */
   async deleteOldFiles(deleteFiles) {
     if (deleteFiles.length > 0) {
-      const keys = deleteFiles.map((filename, index) => path.join(this.options.uploadPath, filename));
+      const keys = deleteFiles.map((filename, index) => path.posix.join(this.options.uploadPath, filename));
       await this.qiniu.batchDelete(keys);
     }
   }
@@ -239,7 +239,7 @@ class QiniuPlugin {
       current: releaseFiles,
       uploadTime: new Date()
     });
-    const key = path.join(this.options.uploadPath, LOG_FILENAME);
+    const key = path.posix.join(this.options.uploadPath, LOG_FILENAME);
     return await this.qiniu.put(key, json);
   }
 
@@ -247,7 +247,7 @@ class QiniuPlugin {
    * 获取文件列表
    */
   async getLogFile() {
-    let remotePath = path.join(this.options.uploadPath, LOG_FILENAME);
+    let remotePath = path.posix.join(this.options.uploadPath, LOG_FILENAME);
     let logDownloadUrl = this.qiniu.getPublicDownloadUrl(remotePath);
 
     let randomParams = '?r=' + +new Date();
