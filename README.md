@@ -1,4 +1,4 @@
-# Qiniu Webpack Plugin [![npm](https://img.shields.io/npm/v/better-qiniu-webpack-plugin.svg)](https://www.npmjs.com/package/better-qiniu-webpack-plugin)
+﻿# Qiniu Webpack Plugin [![npm](https://img.shields.io/npm/v/better-qiniu-webpack-plugin.svg)](https://www.npmjs.com/package/better-qiniu-webpack-plugin)
 
 > 🚀 Webpack 编译后的文件上传到 七牛云存储
 
