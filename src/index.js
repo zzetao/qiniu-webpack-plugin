@@ -28,7 +28,8 @@ class QiniuPlugin {
   constructor(options = { }) {    
     const defaultOptions = {
       uploadPath: 'webpack_assets', // default uploadPath
-      batch: 10
+      batch: 10,
+      deltaUpdate: true
     };
     const fileOptions = this.getFileOptions();
     this.options = Object.assign(defaultOptions, options, fileOptions);
@@ -88,6 +89,9 @@ class QiniuPlugin {
         },
         batch: {
           type: 'number'
+        },
+        deltaUpdate: {
+          type: 'boolean'
         }
       }
     });
@@ -168,7 +172,7 @@ class QiniuPlugin {
       reporter.log = '❤️   上传完毕';
 
       // 当有文件要上传才去删除之前版本的文件，且写入日志
-      if (uploadFiles.length > 0) {
+      if (uploadFiles.length > 0 && !this.options.deltaUpdate) {
 
         if (deleteFiles.length > 0) {
           reporter.log = `👋🏼   将删除 ${deleteFiles.length} 个文件`;
