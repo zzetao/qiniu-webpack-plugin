@@ -42,7 +42,8 @@ module.exports = {
   bucketDomain: 'https://domain.bkt.clouddn.com', // required
   matchFiles: ['!*.html', '!*.map'],
   uploadPath: '/assets',
-  batch: 10
+  batch: 10,
+  deltaUpdate: true
 }
 ```
 
@@ -57,6 +58,7 @@ module.exports = {
 |**[`matchFiles`](#)**|`{Array[string]}`| ['*'] | false |匹配文件/文件夹，支持 include/exclude|
 |**[`uploadPath`](#)**|`{string}`| /webpack_assets | false |上传文件夹名|
 |**[`batch`](#)**|`{number}`| 10 | false |同时上传文件数|
+|**[`deltaUpdate`](#)**|`{Boolean}`| true | false |是否增量构建|
 
 - `bucketDomain` 支持不携带通信协议: `//domain.bkt.clouddn.com`
 - `matchFiles` 匹配相关文件或文件夹，详细使用请看: [micromatch](https://github.com/micromatch/micromatch)
