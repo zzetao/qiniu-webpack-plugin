@@ -21,7 +21,9 @@ const PLUGIN_NAME = 'QiniuWebpackPlugin';
  *    bucketDomain: string, @required
  *    matchFiles: [],
  *    uploadPath: string,
- *    batch: number
+ *    usePublicPath: boolean,
+ *    batch: number,
+ *    deltaUpdate: boolean,
  * }
  */
 class QiniuPlugin {
@@ -29,7 +31,8 @@ class QiniuPlugin {
     const defaultOptions = {
       uploadPath: 'webpack_assets', // default uploadPath
       batch: 10,
-      deltaUpdate: true
+      deltaUpdate: true,
+      usePublicPath: true
     };
     const fileOptions = this.getFileOptions();
     this.options = Object.assign(defaultOptions, options, fileOptions);
@@ -111,7 +114,10 @@ class QiniuPlugin {
   apply (compiler) {
     const beforeRunCallback = (compiler, callback) => {
       // TODO: 检查 output.filename 是否有 hash 输出
-      compiler.options.output.publicPath = this.publicPath;
+      const { usePublicPath } = this.options;
+      if (usePublicPath) {
+        compiler.options.output.publicPath = this.publicPath;
+      }
       callback();
     }
     
@@ -180,11 +186,11 @@ class QiniuPlugin {
           await this.deleteOldFiles(deleteFiles);
           reporter.log = `💙   删除完毕`;  
         }
-
-        reporter.text = `📝   正在写入日志...`;
-        await this.writeLogFile(currentFiles, releaseFiles);
-        reporter.log = `📝   日志记录完毕`
       }
+
+      reporter.text = `📝   正在写入日志...`;
+      await this.writeLogFile(currentFiles, releaseFiles);
+      reporter.log = `📝   日志记录完毕`
 
       reporter.succeed('🎉 \n');
       console.log(chalk.bold.green('==== Qiniu Webpack Plugin ==== \n'));
